@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema PAED - Organização em Tabela Editável (Agente, Aluno, Laudo)</title>
+  <meta name="description" content="Sistema completo e editável para organização de laudos diagnósticos, acompanhamento de alunos e agentes multiprofissionais.">
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- Top Header -->
+    <header class="header">
+      <div class="brand-info">
+        <div class="brand-icon">
+          <i class="fa-solid fa-clipboard-user"></i>
+        </div>
+        <div class="brand-text">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <h1>PAED | Sistema de Laudos & Alunos</h1>
+            <span id="db-status-badge" class="badge-status concluido" style="font-size: 0.7rem; padding: 2px 8px;">
+              <i class="fa-solid fa-database"></i> <span id="db-status-text">SQLite Conectado</span>
+            </span>
+          </div>
+          <p>Gestão de registros editáveis salvos em banco de dados SQLite (paed_database.db)</p>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <button id="btn-theme-toggle" class="btn btn-secondary btn-icon-only" title="Alternar Tema Claro/Escuro" aria-label="Alternar Tema">
+          <i class="fa-solid fa-moon" id="theme-icon"></i>
+        </button>
+        <button id="btn-print" class="btn btn-secondary" title="Imprimir Relatório">
+          <i class="fa-solid fa-print"></i> Impressão
+        </button>
+        <button id="btn-new-record" class="btn btn-primary">
+          <i class="fa-solid fa-plus"></i> Novo Registro
+        </button>
+      </div>
+    </header>
+
+    <!-- Stat Dashboard Cards -->
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon agentes">
+          <i class="fa-solid fa-user-doctor"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="stat-agentes">0</span>
+          <span class="stat-label">Agentes Ativos</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon alunos">
+          <i class="fa-solid fa-user-graduate"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="stat-alunos">0</span>
+          <span class="stat-label">Alunos Atendidos</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon concluidos">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="stat-concluidos">0</span>
+          <span class="stat-label">Laudos Emitidos</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon pendentes">
+          <i class="fa-solid fa-clock"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value" id="stat-pendentes">0</span>
+          <span class="stat-label">Laudos Pendentes</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filters and Actions Toolbar -->
+    <section class="controls-card">
+      <div class="filter-group">
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="input-search" class="search-input" placeholder="Buscar por Agente, Aluno ou conteúdo do Laudo...">
+        </div>
+
+        <select id="select-status" class="select-filter">
+          <option value="">Todos os Status</option>
+          <option value="concluido">Concluído</option>
+          <option value="em_andamento">Em Andamento</option>
+          <option value="pendente">Pendente</option>
+          <option value="revisao">Em Revisão</option>
+        </select>
+
+        <select id="select-cargo" class="select-filter">
+          <option value="">Todas Especialidades</option>
+          <option value="Psicopedagogo(a)">Psicopedagogo(a)</option>
+          <option value="Fonoaudiólogo(a)">Fonoaudiólogo(a)</option>
+          <option value="Psicólogo(a)">Psicólogo(a)</option>
+          <option value="Neuropediatra">Neuropediatra</option>
+          <option value="Terapeuta Ocupacional">Terapeuta Ocupacional</option>
+        </select>
+      </div>
+
+      <div class="action-buttons">
+        <button id="btn-export-csv" class="btn btn-secondary" title="Exportar dados da tabela para CSV">
+          <i class="fa-solid fa-file-csv"></i> CSV
+        </button>
+        <button id="btn-export-json" class="btn btn-secondary" title="Exportar Backup JSON">
+          <i class="fa-solid fa-file-code"></i> JSON
+        </button>
+        <button id="btn-reset-demo" class="btn btn-secondary btn-icon-only" title="Restaurar Dados Demonstrativos">
+          <i class="fa-solid fa-rotate"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- Main Table View -->
+    <main class="table-card">
+      <div class="table-wrapper">
+        <table class="custom-table" id="records-table">
+          <thead>
+            <tr>
+              <th data-sort="agente" id="th-agente">
+                Agente <i class="fa-solid fa-sort sort-icon"></i>
+              </th>
+              <th data-sort="aluno" id="th-aluno">
+                Aluno <i class="fa-solid fa-sort sort-icon"></i>
+              </th>
+              <th data-sort="laudo" id="th-laudo">
+                Laudo & Conteúdo <i class="fa-solid fa-sort sort-icon"></i>
+              </th>
+              <th data-sort="data" id="th-data">
+                Data <i class="fa-solid fa-sort sort-icon"></i>
+              </th>
+              <th data-sort="status" id="th-status">
+                Status <i class="fa-solid fa-sort sort-icon"></i>
+              </th>
+              <th style="text-align: right;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            <!-- Dynamic rows rendered by app.js -->
+          </tbody>
+        </table>
+
+        <div id="empty-state" class="empty-state" style="display: none;">
+          <div class="empty-icon">
+            <i class="fa-solid fa-folder-open"></i>
+          </div>
+          <h3>Nenhum registro encontrado</h3>
+          <p>Tente ajustar a busca ou adicione um novo registro no botão acima.</p>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Modal for Creating / Editing Records -->
+  <div class="modal-overlay" id="record-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="modal-title"><i class="fa-solid fa-user-plus"></i> Novo Registro</h2>
+        <button class="modal-close" id="modal-close-btn" aria-label="Fechar Modal">&times;</button>
+      </div>
+
+      <form id="record-form">
+        <div class="modal-body">
+          <input type="hidden" id="form-id">
+
+          <!-- Section: Agente -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="form-agente-nome">Nome do Agente / Especialista *</label>
+              <input type="text" id="form-agente-nome" class="form-control" placeholder="Ex: Dra. Juliana Costa" required>
+            </div>
+            <div class="form-group">
+              <label for="form-agente-cargo">Cargo / Especialidade *</label>
+              <select id="form-agente-cargo" class="form-control" required>
+                <option value="Psicopedagogo(a)">Psicopedagogo(a)</option>
+                <option value="Fonoaudiólogo(a)">Fonoaudiólogo(a)</option>
+                <option value="Psicólogo(a)">Psicólogo(a)</option>
+                <option value="Neuropediatra">Neuropediatra</option>
+                <option value="Terapeuta Ocupacional">Terapeuta Ocupacional</option>
+                <option value="Pedagogo(a)">Pedagogo(a)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Section: Aluno -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="form-aluno-nome">Nome do Aluno / Paciente *</label>
+              <input type="text" id="form-aluno-nome" class="form-control" placeholder="Ex: Gabriel Martins" required>
+            </div>
+            <div class="form-group">
+              <label for="form-aluno-meta">Turma / Série / Idade</label>
+              <input type="text" id="form-aluno-meta" class="form-control" placeholder="Ex: 4º Ano Fundamental B - 9 anos">
+            </div>
+          </div>
+
+          <!-- Section: Status & Data -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="form-status">Status do Laudo *</label>
+              <select id="form-status" class="form-control" required>
+                <option value="concluido">Concluído</option>
+                <option value="em_andamento">Em Andamento</option>
+                <option value="pendente">Pendente</option>
+                <option value="revisao">Em Revisão</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="form-data">Data do Registro *</label>
+              <input type="date" id="form-data" class="form-control" required>
+            </div>
+          </div>
+
+          <!-- Section: Laudo -->
+          <div class="form-group">
+            <label for="form-laudo-titulo">Título / Diagnóstico Curto *</label>
+            <input type="text" id="form-laudo-titulo" class="form-control" placeholder="Ex: Avaliação de Processamento Auditivo e TDAH" required>
+          </div>
+
+          <div class="form-group">
+            <label for="form-laudo-detalhes">Detalhamento do Laudo / Observações</label>
+            <textarea id="form-laudo-detalhes" class="form-control" placeholder="Descreva os achados, recomendações pedagógicas, intervenções e observações clínicas..."></textarea>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-record">
+            <i class="fa-solid fa-floppy-disk"></i> Salvar Registro
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal for Viewing Full Laudo Details -->
+  <div class="modal-overlay" id="view-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="view-title"><i class="fa-solid fa-file-lines"></i> Detalhes do Laudo</h2>
+        <button class="modal-close" id="view-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" id="view-content">
+        <!-- Injected dynamically -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="view-close-footer">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- App Script -->
+  <script src="app.js"></script>
+</body>
+</html>
