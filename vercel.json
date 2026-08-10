@@ -6,7 +6,7 @@
       "use": "@vercel/node"
     },
     {
-      "src": "index.html",
+      "src": "*.{html,css,js,ico,png,jpg,jpeg,svg,woff,woff2,ttf,eot}",
       "use": "@vercel/static"
     }
   ],
@@ -16,7 +16,7 @@
       "dest": "/api/$1"
     },
     {
-      "src": "/(.*\\.(css|js|html|ico|png|jpg|svg|woff|woff2|ttf|eot))",
+      "src": "/(.*\\.(css|js|html|ico|png|jpg|jpeg|svg|woff|woff2|ttf|eot))",
       "dest": "/$1"
     },
     {
