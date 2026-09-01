@@ -202,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
       'Psicólogo(a) Escolar', 'Psicóloga', 'Neuropediatra', 'Terapeuta Ocupacional',
       'Pedagogo(a)', 'Professor(a) Titular', 'Professor(a) de Apoio (AEE)',
       'Coordenador(a) Pedagógico(a)', 'Orientador(a) Educacional', 'Diretor(a) Escolar',
-      'Assistente Social', 'Monitor(a) / Auxiliar'
+      'Assistente Social', 'Monitor(a) / Auxiliar', 'paed'
     ]);
     records.forEach(r => { if (r.agenteCargo) profSet.add(r.agenteCargo.trim()); });
     ocorrencias.forEach(o => { if (o.profissaoRegistrante) profSet.add(o.profissaoRegistrante.trim()); });
@@ -449,7 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cargoVal = cargoFilter.value;
 
     let filtered = records.filter(rec => {
-      const matchSearch = 
+      const matchSearch =
         rec.agenteNome.toLowerCase().includes(searchTerm) ||
         rec.agenteCargo.toLowerCase().includes(searchTerm) ||
         rec.alunoNome.toLowerCase().includes(searchTerm) ||
@@ -491,7 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusVal = ocoStatusFilter.value;
 
     let filtered = ocorrencias.filter(oco => {
-      const matchSearch = 
+      const matchSearch =
         oco.alunoNome.toLowerCase().includes(searchTerm) ||
         (oco.alunoMeta && oco.alunoMeta.toLowerCase().includes(searchTerm)) ||
         oco.registradoPor.toLowerCase().includes(searchTerm) ||
@@ -539,7 +539,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     emptyState.style.display = 'none';
-    
+
     tableBody.innerHTML = displayRecords.map(rec => {
       const isEditing = editingRowId === rec.id;
       return isEditing ? renderEditableRow(rec) : renderStaticRow(rec);
@@ -556,7 +556,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Check how many occurrences this student has
     const studentOcoCount = ocorrencias.filter(o => o.alunoNome.trim().toLowerCase() === rec.alunoNome.trim().toLowerCase()).length;
-    const ocoBadge = studentOcoCount > 0 
+    const ocoBadge = studentOcoCount > 0
       ? `<span class="badge-gravidade media" style="cursor: pointer;" onclick="filterOcorrenciasForStudent('${escapeHtml(rec.alunoNome)}')"><i class="fa-solid fa-triangle-exclamation"></i> ${studentOcoCount} ocorrência(s)</span>`
       : '';
 
@@ -821,17 +821,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- INLINE EDIT LAUDO HANDLERS ---
-  window.startInlineEdit = function(id) {
+  window.startInlineEdit = function (id) {
     editingRowId = id;
     renderTable();
   };
 
-  window.cancelInlineEdit = function() {
+  window.cancelInlineEdit = function () {
     editingRowId = null;
     renderTable();
   };
 
-  window.saveInlineEdit = async function(id) {
+  window.saveInlineEdit = async function (id) {
     const agenteNome = document.getElementById(`inline-agente-nome-${id}`).value.trim();
     const agenteCargo = document.getElementById(`inline-agente-cargo-${id}`).value.trim();
     const alunoNome = document.getElementById(`inline-aluno-nome-${id}`).value.trim();
@@ -863,17 +863,17 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // --- INLINE EDIT OCORRÊNCIA HANDLERS ---
-  window.startInlineOcoEdit = function(id) {
+  window.startInlineOcoEdit = function (id) {
     editingOcoRowId = id;
     renderOcorrenciasTable();
   };
 
-  window.cancelInlineOcoEdit = function() {
+  window.cancelInlineOcoEdit = function () {
     editingOcoRowId = null;
     renderOcorrenciasTable();
   };
 
-  window.saveInlineOcoEdit = async function(id) {
+  window.saveInlineOcoEdit = async function (id) {
     const alunoNome = document.getElementById(`inline-oco-aluno-${id}`).value.trim();
     const alunoMeta = document.getElementById(`inline-oco-meta-${id}`).value.trim();
     const registradoPor = document.getElementById(`inline-oco-registrante-${id}`).value.trim();
@@ -911,7 +911,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // --- DELETE HANDLERS ---
-  window.deleteRecord = async function(id) {
+  window.deleteRecord = async function (id) {
     const target = records.find(r => r.id === id);
     if (!target) return;
 
@@ -921,7 +921,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  window.deleteOcorrencia = async function(id) {
+  window.deleteOcorrencia = async function (id) {
     const target = ocorrencias.find(o => o.id === id);
     if (!target) return;
 
@@ -940,7 +940,7 @@ document.addEventListener('DOMContentLoaded', () => {
     recordModal.classList.add('active');
   }
 
-  window.openEditModal = function(id) {
+  window.openEditModal = function (id) {
     const rec = records.find(r => r.id === id);
     if (!rec) return;
 
@@ -1007,18 +1007,18 @@ document.addEventListener('DOMContentLoaded', () => {
     ocoModal.classList.add('active');
   }
 
-  window.openCreateOcorrenciaModalForStudent = function(studentName, studentMeta) {
+  window.openCreateOcorrenciaModalForStudent = function (studentName, studentMeta) {
     switchTab('ocorrencias');
     openCreateOcorrenciaModal(studentName, studentMeta);
   };
 
-  window.filterOcorrenciasForStudent = function(studentName) {
+  window.filterOcorrenciasForStudent = function (studentName) {
     switchTab('ocorrencias');
     searchInputOco.value = studentName;
     renderOcorrenciasTable();
   };
 
-  window.openEditOcoModal = function(id) {
+  window.openEditOcoModal = function (id) {
     const oco = ocorrencias.find(o => o.id === id);
     if (!oco) return;
 
@@ -1074,7 +1074,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- VIEW MODAL: LAUDO ---
-  window.openViewModal = function(id) {
+  window.openViewModal = function (id) {
     const rec = records.find(r => r.id === id);
     if (!rec) return;
 
@@ -1124,7 +1124,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- VIEW MODAL: OCORRÊNCIA ---
-  window.openViewOcoModal = function(id) {
+  window.openViewOcoModal = function (id) {
     const oco = ocorrencias.find(o => o.id === id);
     if (!oco) return;
 
