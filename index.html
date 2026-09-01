@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema PAED - Organização em Tabela Editável (Agente, Aluno, Laudo)</title>
-  <meta name="description" content="Sistema completo e editável para organização de laudos diagnósticos, acompanhamento de alunos e agentes multiprofissionais.">
+  <title>Sistema PAED - Laudos, Alunos & Ocorrências</title>
+  <meta name="description" content="Sistema completo e editável para organização de laudos diagnósticos, ocorrências escolares e acompanhamento de alunos.">
   
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -23,13 +23,13 @@
           <i class="fa-solid fa-clipboard-user"></i>
         </div>
         <div class="brand-text">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <h1>PAED | Sistema de Laudos & Alunos</h1>
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <h1>PAED | Sistema de Laudos & Ocorrências</h1>
             <span id="db-status-badge" class="badge-status concluido" style="font-size: 0.7rem; padding: 2px 8px;">
               <i class="fa-solid fa-database"></i> <span id="db-status-text">SQLite Conectado</span>
             </span>
           </div>
-          <p>Gestão de registros editáveis salvos em banco de dados SQLite (paed_database.db)</p>
+          <p>Gestão pedagógica, laudos clínicos e registro de ocorrências para alunos</p>
         </div>
       </div>
       
@@ -37,143 +37,332 @@
         <button id="btn-theme-toggle" class="btn btn-secondary btn-icon-only" title="Alternar Tema Claro/Escuro" aria-label="Alternar Tema">
           <i class="fa-solid fa-moon" id="theme-icon"></i>
         </button>
-        <button id="btn-print" class="btn btn-secondary" title="Imprimir Relatório">
+        <button id="btn-print" class="btn btn-secondary" title="Imprimir Relatório da Tela Atual">
           <i class="fa-solid fa-print"></i> Impressão
         </button>
+        <button id="btn-new-ocorrencia-header" class="btn btn-warning">
+          <i class="fa-solid fa-triangle-exclamation"></i> Nova Ocorrência
+        </button>
         <button id="btn-new-record" class="btn btn-primary">
-          <i class="fa-solid fa-plus"></i> Novo Registro
+          <i class="fa-solid fa-plus"></i> Novo Laudo
         </button>
       </div>
     </header>
 
-    <!-- Stat Dashboard Cards -->
-    <section class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon agentes">
-          <i class="fa-solid fa-user-doctor"></i>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value" id="stat-agentes">0</span>
-          <span class="stat-label">Agentes Ativos</span>
-        </div>
-      </div>
+    <!-- Navigation Tabs Bar -->
+    <nav class="nav-tabs-container">
+      <button class="nav-tab active" id="tab-btn-laudos" data-tab="laudos">
+        <i class="fa-solid fa-file-medical"></i>
+        <span>Laudos & Avaliações</span>
+        <span class="tab-badge" id="tab-count-laudos">0</span>
+      </button>
+      <button class="nav-tab" id="tab-btn-ocorrencias" data-tab="ocorrencias">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>Ocorrências dos Alunos</span>
+        <span class="tab-badge warning" id="tab-count-ocorrencias">0</span>
+      </button>
+    </nav>
 
-      <div class="stat-card">
-        <div class="stat-icon alunos">
-          <i class="fa-solid fa-user-graduate"></i>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value" id="stat-alunos">0</span>
-          <span class="stat-label">Alunos Atendidos</span>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon concluidos">
-          <i class="fa-solid fa-circle-check"></i>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value" id="stat-concluidos">0</span>
-          <span class="stat-label">Laudos Emitidos</span>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon pendentes">
-          <i class="fa-solid fa-clock"></i>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value" id="stat-pendentes">0</span>
-          <span class="stat-label">Laudos Pendentes</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- Filters and Actions Toolbar -->
-    <section class="controls-card">
-      <div class="filter-group">
-        <div class="search-box">
-          <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="text" id="input-search" class="search-input" placeholder="Buscar por Agente, Aluno ou conteúdo do Laudo...">
-        </div>
-
-        <select id="select-status" class="select-filter">
-          <option value="">Todos os Status</option>
-          <option value="concluido">Concluído</option>
-          <option value="em_andamento">Em Andamento</option>
-          <option value="pendente">Pendente</option>
-          <option value="revisao">Em Revisão</option>
-        </select>
-
-        <select id="select-cargo" class="select-filter">
-          <option value="">Todas Especialidades</option>
-          <option value="Psicopedagogo(a)">Psicopedagogo(a)</option>
-          <option value="Fonoaudiólogo(a)">Fonoaudiólogo(a)</option>
-          <option value="Psicólogo(a)">Psicólogo(a)</option>
-          <option value="Neuropediatra">Neuropediatra</option>
-          <option value="Terapeuta Ocupacional">Terapeuta Ocupacional</option>
-        </select>
-      </div>
-
-      <div class="action-buttons">
-        <button id="btn-export-csv" class="btn btn-secondary" title="Exportar dados da tabela para CSV">
-          <i class="fa-solid fa-file-csv"></i> CSV
-        </button>
-        <button id="btn-export-json" class="btn btn-secondary" title="Exportar Backup JSON">
-          <i class="fa-solid fa-file-code"></i> JSON
-        </button>
-        <button id="btn-reset-demo" class="btn btn-secondary btn-icon-only" title="Restaurar Dados Demonstrativos">
-          <i class="fa-solid fa-rotate"></i>
-        </button>
-      </div>
-    </section>
-
-    <!-- Main Table View -->
-    <main class="table-card">
-      <div class="table-wrapper">
-        <table class="custom-table" id="records-table">
-          <thead>
-            <tr>
-              <th data-sort="agente" id="th-agente">
-                Agente <i class="fa-solid fa-sort sort-icon"></i>
-              </th>
-              <th data-sort="aluno" id="th-aluno">
-                Aluno <i class="fa-solid fa-sort sort-icon"></i>
-              </th>
-              <th data-sort="laudo" id="th-laudo">
-                Laudo & Conteúdo <i class="fa-solid fa-sort sort-icon"></i>
-              </th>
-              <th data-sort="data" id="th-data">
-                Data <i class="fa-solid fa-sort sort-icon"></i>
-              </th>
-              <th data-sort="status" id="th-status">
-                Status <i class="fa-solid fa-sort sort-icon"></i>
-              </th>
-              <th style="text-align: right;">Ações</th>
-            </tr>
-          </thead>
-          <tbody id="table-body">
-            <!-- Dynamic rows rendered by app.js -->
-          </tbody>
-        </table>
-
-        <div id="empty-state" class="empty-state" style="display: none;">
-          <div class="empty-icon">
-            <i class="fa-solid fa-folder-open"></i>
+    <!-- ========================================================================= -->
+    <!-- TAB SECTION 1: LAUDOS & AVALIAÇÕES                                         -->
+    <!-- ========================================================================= -->
+    <section id="section-laudos" class="tab-section active">
+      
+      <!-- Stat Dashboard Cards (Laudos) -->
+      <section class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon agentes">
+            <i class="fa-solid fa-user-doctor"></i>
           </div>
-          <h3>Nenhum registro encontrado</h3>
-          <p>Tente ajustar a busca ou adicione um novo registro no botão acima.</p>
+          <div class="stat-info">
+            <span class="stat-value" id="stat-agentes">0</span>
+            <span class="stat-label">Profissionais Ativos</span>
+          </div>
         </div>
-      </div>
-    </main>
+
+        <div class="stat-card">
+          <div class="stat-icon alunos">
+            <i class="fa-solid fa-user-graduate"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value" id="stat-alunos">0</span>
+            <span class="stat-label">Alunos com Laudo</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon concluidos">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value" id="stat-concluidos">0</span>
+            <span class="stat-label">Laudos Concluídos</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon pendentes">
+            <i class="fa-solid fa-clock"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value" id="stat-pendentes">0</span>
+            <span class="stat-label">Laudos Pendentes / Em Andamento</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Filters and Actions Toolbar (Laudos) -->
+      <section class="controls-card">
+        <div class="filter-group">
+          <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="input-search" class="search-input" placeholder="Buscar por Profissional, Aluno ou conteúdo do Laudo...">
+          </div>
+
+          <select id="select-status" class="select-filter">
+            <option value="">Todos os Status</option>
+            <option value="concluido">Concluído</option>
+            <option value="em_andamento">Em Andamento</option>
+            <option value="pendente">Pendente</option>
+            <option value="revisao">Em Revisão</option>
+          </select>
+
+          <select id="select-cargo" class="select-filter">
+            <option value="">Todas Profissões</option>
+            <!-- Dynamically populated or default options -->
+            <option value="Psicopedagoga">Psicopedagoga</option>
+            <option value="Fonoaudióloga">Fonoaudióloga</option>
+            <option value="Psicóloga">Psicóloga</option>
+            <option value="Neuropediatra">Neuropediatra</option>
+            <option value="Terapeuta Ocupacional">Terapeuta Ocupacional</option>
+            <option value="Professor(a)">Professor(a)</option>
+          </select>
+        </div>
+
+        <div class="action-buttons">
+          <button id="btn-export-csv" class="btn btn-secondary" title="Exportar Laudos para CSV">
+            <i class="fa-solid fa-file-csv"></i> CSV
+          </button>
+          <button id="btn-export-json" class="btn btn-secondary" title="Exportar Backup JSON">
+            <i class="fa-solid fa-file-code"></i> JSON
+          </button>
+          <button id="btn-reset-demo" class="btn btn-secondary btn-icon-only" title="Restaurar Dados Demonstrativos (Laudos e Ocorrências)">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- Main Table View (Laudos) -->
+      <main class="table-card">
+        <div class="table-wrapper">
+          <table class="custom-table" id="records-table">
+            <thead>
+              <tr>
+                <th data-sort="agente" id="th-agente">
+                  Profissional / Quem Registrou <i class="fa-solid fa-sort sort-icon"></i>
+                </th>
+                <th data-sort="aluno" id="th-aluno">
+                  Aluno <i class="fa-solid fa-sort sort-icon"></i>
+                </th>
+                <th data-sort="laudo" id="th-laudo">
+                  Laudo & Diagnóstico <i class="fa-solid fa-sort sort-icon"></i>
+                </th>
+                <th data-sort="data" id="th-data">
+                  Data <i class="fa-solid fa-sort sort-icon"></i>
+                </th>
+                <th data-sort="status" id="th-status">
+                  Status <i class="fa-solid fa-sort sort-icon"></i>
+                </th>
+                <th style="text-align: right;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="table-body">
+              <!-- Dynamic rows rendered by app.js -->
+            </tbody>
+          </table>
+
+          <div id="empty-state" class="empty-state" style="display: none;">
+            <div class="empty-icon">
+              <i class="fa-solid fa-folder-open"></i>
+            </div>
+            <h3>Nenhum laudo encontrado</h3>
+            <p>Tente ajustar a busca ou adicione um novo registro no botão "+ Novo Laudo".</p>
+          </div>
+        </div>
+      </main>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- TAB SECTION 2: OCORRÊNCIAS DOS ALUNOS                                      -->
+    <!-- ========================================================================= -->
+    <section id="section-ocorrencias" class="tab-section">
+      
+      <!-- Stat Dashboard Cards (Ocorrências) -->
+      <section class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon warning">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value" id="stat-oco-total">0</span>
+            <span class="stat-label">Total de Ocorrências</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon pendentes">
+            <i class="fa-solid fa-fire"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value" id="stat-oco-urgentes">0</span>
+            <span class="stat-label">Alta Gravidade / Urgentes</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon andamento">
+            <i class="fa-solid fa-spinner"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value" id="stat-oco-andamento">0</span>
+            <span class="stat-label">Em Análise / Acompanhamento</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon concluidos">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value" id="stat-oco-resolvidas">0</span>
+            <span class="stat-label">Ocorrências Resolvidas</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Filters and Actions Toolbar (Ocorrências) -->
+      <section class="controls-card">
+        <div class="filter-group">
+          <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="input-search-oco" class="search-input" placeholder="Buscar por Aluno, Registrante, Motivo ou Medidas Tomadas...">
+          </div>
+
+          <select id="select-oco-tipo" class="select-filter">
+            <option value="">Todos os Tipos</option>
+            <option value="Comportamental">Comportamental</option>
+            <option value="Pedagogica">Pedagógica</option>
+            <option value="Saude">Saúde / Médica</option>
+            <option value="Disciplinar">Disciplinar / Conflito</option>
+            <option value="Frequencia">Frequência / Atraso</option>
+            <option value="Outro">Outro</option>
+          </select>
+
+          <select id="select-oco-gravidade" class="select-filter">
+            <option value="">Todas as Gravidades</option>
+            <option value="Baixa">Baixa (Informativa)</option>
+            <option value="Media">Média</option>
+            <option value="Alta">Alta</option>
+            <option value="Urgente">Urgente</option>
+          </select>
+
+          <select id="select-oco-status" class="select-filter">
+            <option value="">Todos os Status</option>
+            <option value="registrada">Registrada</option>
+            <option value="em_analise">Em Análise</option>
+            <option value="em_acompanhamento">Em Acompanhamento</option>
+            <option value="resolvida">Resolvida</option>
+          </select>
+        </div>
+
+        <div class="action-buttons">
+          <button id="btn-export-oco-csv" class="btn btn-secondary" title="Exportar Ocorrências para CSV">
+            <i class="fa-solid fa-file-csv"></i> CSV
+          </button>
+          <button id="btn-export-oco-json" class="btn btn-secondary" title="Exportar Backup Ocorrências JSON">
+            <i class="fa-solid fa-file-code"></i> JSON
+          </button>
+          <button id="btn-new-ocorrencia-main" class="btn btn-warning">
+            <i class="fa-solid fa-plus"></i> Nova Ocorrência
+          </button>
+        </div>
+      </section>
+
+      <!-- Main Table View (Ocorrências) -->
+      <main class="table-card">
+        <div class="table-wrapper">
+          <table class="custom-table" id="ocorrencias-table">
+            <thead>
+              <tr>
+                <th data-sort-oco="aluno" id="th-oco-aluno">
+                  Aluno <i class="fa-solid fa-sort sort-icon"></i>
+                </th>
+                <th data-sort-oco="registradoPor" id="th-oco-registrado">
+                  Quem Registrou (Profissão) <i class="fa-solid fa-sort sort-icon"></i>
+                </th>
+                <th data-sort-oco="tipo" id="th-oco-tipo">
+                  Tipo & Gravidade <i class="fa-solid fa-sort sort-icon"></i>
+                </th>
+                <th data-sort-oco="titulo" id="th-oco-titulo">
+                  Ocorrência & Relato <i class="fa-solid fa-sort sort-icon"></i>
+                </th>
+                <th data-sort-oco="data" id="th-oco-data">
+                  Data <i class="fa-solid fa-sort sort-icon"></i>
+                </th>
+                <th data-sort-oco="status" id="th-oco-status">
+                  Status <i class="fa-solid fa-sort sort-icon"></i>
+                </th>
+                <th style="text-align: right;">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="ocorrencias-table-body">
+              <!-- Dynamic rows rendered by app.js -->
+            </tbody>
+          </table>
+
+          <div id="empty-state-ocorrencias" class="empty-state" style="display: none;">
+            <div class="empty-icon">
+              <i class="fa-solid fa-clipboard-check"></i>
+            </div>
+            <h3>Nenhuma ocorrência encontrada</h3>
+            <p>Tente ajustar a busca ou registre uma nova ocorrência para os alunos.</p>
+          </div>
+        </div>
+      </main>
+    </section>
 
   </div>
 
-  <!-- Modal for Creating / Editing Records -->
+  <!-- ========================================================================= -->
+  <!-- DATALISTS (AUTOCOMPLETE DINÂMICO)                                         -->
+  <!-- ========================================================================= -->
+  <datalist id="profissoes-datalist">
+    <option value="Psicopedagogo(a)">
+    <option value="Fonoaudiólogo(a)">
+    <option value="Psicólogo(a) Escolar">
+    <option value="Neuropediatra">
+    <option value="Terapeuta Ocupacional">
+    <option value="Pedagogo(a)">
+    <option value="Professor(a) Titular">
+    <option value="Professor(a) de Apoio (AEE)">
+    <option value="Coordenador(a) Pedagógico(a)">
+    <option value="Orientador(a) Educacional">
+    <option value="Diretor(a) Escolar">
+    <option value="Assistente Social">
+    <option value="Monitor(a) / Auxiliar">
+  </datalist>
+
+  <datalist id="alunos-datalist">
+    <!-- Populated dynamically with registered students -->
+  </datalist>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: CRIAR / EDITAR LAUDO                                               -->
+  <!-- ========================================================================= -->
   <div class="modal-overlay" id="record-modal">
     <div class="modal-card">
       <div class="modal-header">
-        <h2 id="modal-title"><i class="fa-solid fa-user-plus"></i> Novo Registro</h2>
+        <h2 id="modal-title"><i class="fa-solid fa-user-plus"></i> Novo Laudo / Registro</h2>
         <button class="modal-close" id="modal-close-btn" aria-label="Fechar Modal">&times;</button>
       </div>
 
@@ -181,22 +370,15 @@
         <div class="modal-body">
           <input type="hidden" id="form-id">
 
-          <!-- Section: Agente -->
+          <!-- Section: Agente / Quem registra -->
           <div class="form-row">
             <div class="form-group">
-              <label for="form-agente-nome">Nome do Agente / Especialista *</label>
-              <input type="text" id="form-agente-nome" class="form-control" placeholder="Ex: Dra. Juliana Costa" required>
+              <label for="form-agente-nome">Nome de quem está registrando *</label>
+              <input type="text" id="form-agente-nome" class="form-control" placeholder="Ex: Dra. Juliana Costa ou Prof. Marcos" required>
             </div>
             <div class="form-group">
-              <label for="form-agente-cargo">Cargo / Especialidade *</label>
-              <select id="form-agente-cargo" class="form-control" required>
-                <option value="Psicopedagogo(a)">Psicopedagogo(a)</option>
-                <option value="Fonoaudiólogo(a)">Fonoaudiólogo(a)</option>
-                <option value="Psicólogo(a)">Psicólogo(a)</option>
-                <option value="Neuropediatra">Neuropediatra</option>
-                <option value="Terapeuta Ocupacional">Terapeuta Ocupacional</option>
-                <option value="Pedagogo(a)">Pedagogo(a)</option>
-              </select>
+              <label for="form-agente-cargo">Profissão / Cargo de quem está registrando *</label>
+              <input type="text" id="form-agente-cargo" class="form-control" list="profissoes-datalist" placeholder="Digite ou selecione a sua profissão..." required>
             </div>
           </div>
 
@@ -204,7 +386,7 @@
           <div class="form-row">
             <div class="form-group">
               <label for="form-aluno-nome">Nome do Aluno / Paciente *</label>
-              <input type="text" id="form-aluno-nome" class="form-control" placeholder="Ex: Gabriel Martins" required>
+              <input type="text" id="form-aluno-nome" class="form-control" list="alunos-datalist" placeholder="Ex: Gabriel Martins" required>
             </div>
             <div class="form-group">
               <label for="form-aluno-meta">Turma / Série / Idade</label>
@@ -252,7 +434,115 @@
     </div>
   </div>
 
-  <!-- Modal for Viewing Full Laudo Details -->
+  <!-- ========================================================================= -->
+  <!-- MODAL: CRIAR / EDITAR OCORRÊNCIA                                          -->
+  <!-- ========================================================================= -->
+  <div class="modal-overlay" id="ocorrencia-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="oco-modal-title"><i class="fa-solid fa-triangle-exclamation"></i> Registrar Ocorrência do Aluno</h2>
+        <button class="modal-close" id="oco-modal-close-btn" aria-label="Fechar Modal">&times;</button>
+      </div>
+
+      <form id="ocorrencia-form">
+        <div class="modal-body">
+          <input type="hidden" id="form-oco-id">
+
+          <!-- Section: Aluno -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="form-oco-aluno-nome">Nome do Aluno *</label>
+              <input type="text" id="form-oco-aluno-nome" class="form-control" list="alunos-datalist" placeholder="Ex: Gabriel Martins" required>
+            </div>
+            <div class="form-group">
+              <label for="form-oco-aluno-meta">Turma / Série / Idade</label>
+              <input type="text" id="form-oco-aluno-meta" class="form-control" placeholder="Ex: 4º Ano B (9 anos)">
+            </div>
+          </div>
+
+          <!-- Section: Registrante (Quem registra + Profissão livre) -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="form-oco-registrado-por">Nome de quem está registrando *</label>
+              <input type="text" id="form-oco-registrado-por" class="form-control" placeholder="Ex: Profª Fabiana Souza" required>
+            </div>
+            <div class="form-group">
+              <label for="form-oco-profissao">Profissão de quem está registrando *</label>
+              <input type="text" id="form-oco-profissao" class="form-control" list="profissoes-datalist" placeholder="Digite a sua profissão (ex: Professora, Coordenadora...)" required>
+            </div>
+          </div>
+
+          <!-- Section: Tipo, Gravidade, Status, Data -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="form-oco-tipo">Tipo de Ocorrência *</label>
+              <select id="form-oco-tipo" class="form-control" required>
+                <option value="Comportamental">Comportamental</option>
+                <option value="Pedagogica">Pedagógica / Aprendizagem</option>
+                <option value="Saude">Saúde / Médica / Sensorial</option>
+                <option value="Disciplinar">Disciplinar / Conflito</option>
+                <option value="Frequencia">Frequência / Atraso</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="form-oco-gravidade">Nível de Gravidade / Urgência *</label>
+              <select id="form-oco-gravidade" class="form-control" required>
+                <option value="Baixa">Baixa (Informativa / Rotina)</option>
+                <option value="Media">Média (Atenção Pedagógica)</option>
+                <option value="Alta">Alta (Intervenção Necessária)</option>
+                <option value="Urgente">Urgente (Ação Imediata)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="form-oco-data">Data da Ocorrência *</label>
+              <input type="date" id="form-oco-data" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="form-oco-status">Status da Ocorrência *</label>
+              <select id="form-oco-status" class="form-control" required>
+                <option value="registrada">Registrada</option>
+                <option value="em_analise">Em Análise</option>
+                <option value="em_acompanhamento">Em Acompanhamento</option>
+                <option value="resolvida">Resolvida</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Section: Título, Descrição & Medidas -->
+          <div class="form-group">
+            <label for="form-oco-titulo">Assunto / Título da Ocorrência *</label>
+            <input type="text" id="form-oco-titulo" class="form-control" placeholder="Ex: Dificuldade de regulação e choro intenso durante prova" required>
+          </div>
+
+          <div class="form-group">
+            <label for="form-oco-descricao">Descrição Detalhada do Ocorrido *</label>
+            <textarea id="form-oco-descricao" class="form-control" placeholder="Relate o que aconteceu, o contexto, gatilhos observados, comportamento do aluno..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="form-oco-medidas">Medidas Tomadas / Encaminhamentos Pedagógicos</label>
+            <textarea id="form-oco-medidas" class="form-control" placeholder="Ex: Aluno acolhido, responsáveis comunicados, encaminhamento para psicopedagogia, combinados com a turma..."></textarea>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-oco-modal">Cancelar</button>
+          <button type="submit" class="btn btn-warning" id="btn-save-ocorrencia">
+            <i class="fa-solid fa-floppy-disk"></i> Salvar Ocorrência
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: VISUALIZAR LAUDO COMPLETO                                          -->
+  <!-- ========================================================================= -->
   <div class="modal-overlay" id="view-modal">
     <div class="modal-card">
       <div class="modal-header">
@@ -263,7 +553,31 @@
         <!-- Injected dynamically -->
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" id="view-close-footer">Fechar</button>
+        <button type="button" class="btn btn-secondary" id="view-print-btn" onclick="window.print()">
+          <i class="fa-solid fa-print"></i> Imprimir Laudo
+        </button>
+        <button type="button" class="btn btn-primary" id="view-close-footer">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: VISUALIZAR OCORRÊNCIA COMPLETA                                     -->
+  <!-- ========================================================================= -->
+  <div class="modal-overlay" id="view-oco-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="view-oco-title"><i class="fa-solid fa-triangle-exclamation"></i> Relatório de Ocorrência</h2>
+        <button class="modal-close" id="view-oco-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" id="view-oco-content">
+        <!-- Injected dynamically -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="view-oco-print-btn" onclick="window.print()">
+          <i class="fa-solid fa-print"></i> Imprimir Ocorrência
+        </button>
+        <button type="button" class="btn btn-primary" id="view-oco-close-footer">Fechar</button>
       </div>
     </div>
   </div>
