@@ -1092,7 +1092,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <p style="font-size: 0.85rem; color: var(--text-muted);">Data do Laudo: <strong>${formatDateBR(rec.data)}</strong> | Status: <strong>${statusLabels[rec.status] || rec.status}</strong></p>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; background: var(--bg-surface-elevated); padding: 14px; border-radius: var(--radius-sm);">
+        <div class="view-detail-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; background: var(--bg-surface-elevated); padding: 14px; border-radius: var(--radius-sm);">
           <div>
             <span style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Profissional / Registrante</span>
             <h4 style="font-size: 0.95rem; color: var(--text-main); font-weight: 600; margin-top: 2px;">${escapeHtml(rec.agenteNome)}</h4>
@@ -1156,7 +1156,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </p>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; background: var(--bg-surface-elevated); padding: 14px; border-radius: var(--radius-sm);">
+        <div class="view-detail-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; background: var(--bg-surface-elevated); padding: 14px; border-radius: var(--radius-sm);">
           <div>
             <span style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Aluno da Ocorrência</span>
             <h4 style="font-size: 0.95rem; color: var(--text-main); font-weight: 600; margin-top: 2px;">${escapeHtml(oco.alunoNome)}</h4>
