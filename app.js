@@ -111,11 +111,58 @@ document.addEventListener('DOMContentLoaded', () => {
   const alunosDatalist = document.getElementById('alunos-datalist');
   const profissoesDatalist = document.getElementById('profissoes-datalist');
 
-  // Actions
+  // Actions & Import
   const btnThemeToggle = document.getElementById('btn-theme-toggle');
   const themeIcon = document.getElementById('theme-icon');
   const btnPrint = document.getElementById('btn-print');
   const toastContainer = document.getElementById('toast-container');
+  const btnImportLaudos = document.getElementById('btn-import-laudos');
+  const btnImportOco = document.getElementById('btn-import-oco');
+
+  // Import Modal Elements
+  const importModal = document.getElementById('import-modal');
+  const importModalTitle = document.getElementById('import-modal-title');
+  const importModalCloseBtn = document.getElementById('import-modal-close-btn');
+  const importUploadStep = document.getElementById('import-upload-step');
+  const importReviewForm = document.getElementById('import-review-form');
+  const importDropzone = document.getElementById('import-dropzone');
+  const mainFileInput = document.getElementById('main-file-input');
+  const btnSelectCsv = document.getElementById('btn-select-csv');
+  const btnSelectPdf = document.getElementById('btn-select-pdf');
+  const btnCancelImportReview = document.getElementById('btn-cancel-import-review');
+
+  const importTargetLaudo = document.getElementById('import-target-laudo');
+  const importTargetOco = document.getElementById('import-target-oco');
+  const labelTargetLaudo = document.getElementById('label-target-laudo');
+  const labelTargetOco = document.getElementById('label-target-oco');
+  const importLaudoFields = document.getElementById('import-laudo-fields');
+  const importOcoFields = document.getElementById('import-oco-fields');
+
+  const importAlunoNome = document.getElementById('import-aluno-nome');
+  const importAlunoMeta = document.getElementById('import-aluno-meta');
+  const importAgenteNome = document.getElementById('import-agente-nome');
+  const importAgenteCargo = document.getElementById('import-agente-cargo');
+
+  const importLaudoStatus = document.getElementById('import-laudo-status');
+  const importLaudoData = document.getElementById('import-laudo-data');
+  const importLaudoTitulo = document.getElementById('import-laudo-titulo');
+  const importLaudoDetalhes = document.getElementById('import-laudo-detalhes');
+
+  const importOcoTipo = document.getElementById('import-oco-tipo');
+  const importOcoGravidade = document.getElementById('import-oco-gravidade');
+  const importOcoData = document.getElementById('import-oco-data');
+  const importOcoStatus = document.getElementById('import-oco-status');
+  const importOcoTitulo = document.getElementById('import-oco-titulo');
+  const importOcoDescricao = document.getElementById('import-oco-descricao');
+  const importOcoMedidas = document.getElementById('import-oco-medidas');
+  const importRawText = document.getElementById('import-raw-text');
+
+  let currentImportTarget = 'laudos';
+
+  // PDF.js worker setup
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
 
   // Initialize
   initTheme();
@@ -1303,6 +1350,500 @@ document.addEventListener('DOMContentLoaded', () => {
     btnExportJson.addEventListener('click', exportToJSON);
     btnExportOcoCsv.addEventListener('click', exportOcoToCSV);
     btnExportOcoJson.addEventListener('click', exportOcoToJSON);
+
+    // Imports
+    if (btnImportLaudos) btnImportLaudos.addEventListener('click', () => openImportModal('laudos'));
+    if (btnImportOco) btnImportOco.addEventListener('click', () => openImportModal('ocorrencias'));
+    if (importModalCloseBtn) importModalCloseBtn.addEventListener('click', closeImportModal);
+    if (btnCancelImportReview) {
+      btnCancelImportReview.addEventListener('click', () => {
+        importUploadStep.style.display = 'block';
+        importReviewForm.style.display = 'none';
+        if (mainFileInput) mainFileInput.value = '';
+      });
+    }
+
+    if (btnSelectCsv) {
+      btnSelectCsv.addEventListener('click', (e) => {
+        e.stopPropagation();
+        mainFileInput.accept = '.csv, text/csv';
+        mainFileInput.click();
+      });
+    }
+
+    if (btnSelectPdf) {
+      btnSelectPdf.addEventListener('click', (e) => {
+        e.stopPropagation();
+        mainFileInput.accept = '.pdf, application/pdf';
+        mainFileInput.click();
+      });
+    }
+
+    if (mainFileInput) {
+      mainFileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          processUploadedFile(e.target.files[0]);
+        }
+      });
+    }
+
+    if (importTargetLaudo && importTargetOco) {
+      importTargetLaudo.addEventListener('change', () => setImportTarget('laudos'));
+      importTargetOco.addEventListener('change', () => setImportTarget('ocorrencias'));
+    }
+
+    if (importDropzone) {
+      importDropzone.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
+        mainFileInput.accept = '.csv, .pdf, text/csv, application/pdf';
+        mainFileInput.click();
+      });
+
+      importDropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        importDropzone.classList.add('dragover');
+      });
+
+      importDropzone.addEventListener('dragleave', () => {
+        importDropzone.classList.remove('dragover');
+      });
+
+      importDropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        importDropzone.classList.remove('dragover');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          processUploadedFile(e.dataTransfer.files[0]);
+        }
+      });
+    }
+
+    if (importReviewForm) {
+      importReviewForm.addEventListener('submit', handleImportReviewSubmit);
+    }
+
+    window.addEventListener('click', (e) => {
+      if (e.target === importModal) closeImportModal();
+    });
+  }
+
+  // --- IMPORT SYSTEM LOGIC ---
+  function openImportModal(target = 'laudos') {
+    setImportTarget(target);
+    importUploadStep.style.display = 'block';
+    importReviewForm.style.display = 'none';
+    if (mainFileInput) mainFileInput.value = '';
+    importModal.classList.add('active');
+  }
+
+  function closeImportModal() {
+    importModal.classList.remove('active');
+    if (mainFileInput) mainFileInput.value = '';
+  }
+
+  function setImportTarget(target) {
+    currentImportTarget = target;
+    if (target === 'laudos') {
+      importTargetLaudo.checked = true;
+      labelTargetLaudo.classList.add('active');
+      labelTargetOco.classList.remove('active');
+      importLaudoFields.style.display = 'block';
+      importOcoFields.style.display = 'none';
+    } else {
+      importTargetOco.checked = true;
+      labelTargetOco.classList.add('active');
+      labelTargetLaudo.classList.remove('active');
+      importLaudoFields.style.display = 'none';
+      importOcoFields.style.display = 'block';
+    }
+  }
+
+  async function processUploadedFile(file) {
+    if (!file) return;
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isCsv = file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv') || file.type.includes('csv');
+
+    if (isCsv) {
+      try {
+        showToast('Processando planilha CSV...', 'info');
+        await importCSVFile(file);
+      } catch (err) {
+        console.error(err);
+        showToast('Erro ao ler arquivo CSV: ' + err.message, 'danger');
+      }
+    } else if (isPdf) {
+      try {
+        showToast('Extraindo texto do laudo PDF...', 'info');
+        const rawText = await extractTextFromPdf(file);
+        const parsed = parseClinicalText(rawText, file.name);
+
+        // Fill form fields
+        importAlunoNome.value = parsed.alunoNome || '';
+        importAlunoMeta.value = parsed.alunoMeta || '';
+        importAgenteNome.value = parsed.agenteNome || '';
+        importAgenteCargo.value = parsed.agenteCargo || '';
+
+        importLaudoStatus.value = parsed.status || 'concluido';
+        importLaudoData.value = parsed.data || new Date().toISOString().split('T')[0];
+        importLaudoTitulo.value = parsed.titulo || '';
+        importLaudoDetalhes.value = parsed.detalhes || '';
+
+        importOcoTipo.value = parsed.tipoOcorrencia || 'Pedagogica';
+        importOcoGravidade.value = parsed.gravidade || 'Media';
+        importOcoData.value = parsed.data || new Date().toISOString().split('T')[0];
+        importOcoStatus.value = 'registrada';
+        importOcoTitulo.value = parsed.titulo || '';
+        importOcoDescricao.value = parsed.detalhes || '';
+        importOcoMedidas.value = '';
+
+        importRawText.textContent = parsed.rawText || 'Nenhum texto detectado.';
+
+        // Switch to Review Step
+        importUploadStep.style.display = 'none';
+        importReviewForm.style.display = 'block';
+        showToast('Dados extraídos do PDF com sucesso! Revise e confirme.', 'success');
+      } catch (err) {
+        console.error(err);
+        showToast('Erro ao processar arquivo PDF: ' + err.message, 'danger');
+      }
+    } else {
+      showToast('Formato não suportado. Por favor, envie um arquivo .CSV ou .PDF.', 'warning');
+    }
+  }
+
+  // --- PDF TEXT EXTRACTION & HEURISTICS ---
+  async function extractTextFromPdf(file) {
+    if (!window.pdfjsLib) {
+      throw new Error('Biblioteca PDF.js não carregada');
+    }
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+    let fullText = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items.map(item => item.str).join(' ');
+      fullText += pageText + '\n';
+    }
+    return fullText;
+  }
+
+  function parseClinicalText(text, filename = '') {
+    const clean = text.replace(/\r/g, '').trim();
+    const lines = clean.split('\n').map(l => l.trim()).filter(Boolean);
+
+    let alunoNome = '';
+    let alunoMeta = '';
+    let agenteNome = '';
+    let agenteCargo = '';
+    let data = '';
+    let titulo = '';
+    let detalhes = clean;
+    let status = 'concluido';
+    let gravidade = 'Media';
+    let tipoOcorrencia = 'Pedagogica';
+
+    // Student Name match
+    const alunoMatch = clean.match(/(?:aluno|paciente|estudante|nome(?:\s+do\s+(?:aluno|paciente))?)\s*[:\-–]\s*([^\n\r,\.;]+)/i);
+    if (alunoMatch) alunoNome = alunoMatch[1].trim();
+
+    // Turma / Série / Idade
+    const metaMatch = clean.match(/(?:turma|s[eé]rie|ano|idade|grau)\s*[:\-–]\s*([^\n\r,\.;]+)/i);
+    if (metaMatch) alunoMeta = metaMatch[1].trim();
+
+    // Professional / Doctor / Diagnostician
+    const agenteMatch = clean.match(/(?:profissional|m[eé]dico|avaliador|registrad[ao](?:\s+por)?|psic[oó]log[ao]|psicopedagog[ao]|fonoaudi[oó]log[ao]|dr[a]?\.?)\s*[:\-–]\s*([^\n\r,;]+)/i);
+    if (agenteMatch) {
+      agenteNome = agenteMatch[1].trim();
+    } else {
+      const drMatch = clean.match(/(?:Dra?\.\s+[A-ZÀ-Ú][a-zà-ú]+(?:\s+[A-ZÀ-Ú][a-zà-ú]+)+)/);
+      if (drMatch) agenteNome = drMatch[0].trim();
+    }
+
+    // Role / Profession
+    const cargosList = [
+      'Psicopedagoga', 'Psicopedagogo', 'Fonoaudióloga', 'Fonoaudiólogo',
+      'Neuropediatra', 'Psicóloga Escolar', 'Psicólogo Escolar', 'Psicóloga', 'Psicólogo',
+      'Terapeuta Ocupacional', 'Pedagoga', 'Pedagogo', 'Professor(a) de Apoio (AEE)',
+      'Professor(a) Titular', 'Professora', 'Professor', 'Coordenadora Pedagógica', 'Coordenador Pedagógico',
+      'Orientador(a) Educacional', 'Assistente Social'
+    ];
+    for (const c of cargosList) {
+      const reg = new RegExp(`\\b${c}\\b`, 'i');
+      if (reg.test(clean)) {
+        agenteCargo = c;
+        break;
+      }
+    }
+    if (!agenteCargo && agenteNome) agenteCargo = 'Especialista';
+
+    // Date
+    const dateMatch = clean.match(/\b(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})\b/);
+    if (dateMatch) {
+      const day = dateMatch[1].padStart(2, '0');
+      const month = dateMatch[2].padStart(2, '0');
+      const year = dateMatch[3];
+      data = `${year}-${month}-${day}`;
+    } else {
+      const monthsPt = {
+        'janeiro': '01', 'fevereiro': '02', 'março': '03', 'marco': '03', 'abril': '04',
+        'maio': '05', 'junho': '06', 'julho': '07', 'agosto': '08', 'setembro': '09',
+        'outubro': '10', 'novembro': '11', 'dezembro': '12'
+      };
+      const textDateMatch = clean.match(/(\d{1,2})\s+de\s+([a-zçã]+)\s+de\s+(\d{4})/i);
+      if (textDateMatch && monthsPt[textDateMatch[2].toLowerCase()]) {
+        const day = textDateMatch[1].padStart(2, '0');
+        const month = monthsPt[textDateMatch[2].toLowerCase()];
+        const year = textDateMatch[3];
+        data = `${year}-${month}-${day}`;
+      }
+    }
+    if (!data) data = new Date().toISOString().split('T')[0];
+
+    // Diagnostico / Titulo
+    const diagMatch = clean.match(/(?:diagn[oó]stico|laudo(?:\s+diagn[oó]stico)?|hip[oó]tese\s+diagn[oó]stica|cid(?:\s*10|\s*11)?|assunto|t[ií]tulo)\s*[:\-–]\s*([^\n\r]+)/i);
+    if (diagMatch) {
+      titulo = diagMatch[1].trim();
+    } else if (filename) {
+      titulo = filename.replace(/\.[^/.]+$/, '').replace(/[_\-+]/g, ' ');
+    } else if (lines.length > 0) {
+      titulo = lines[0].substring(0, 80);
+    }
+
+    if (/urgente/i.test(clean)) gravidade = 'Urgente';
+    else if (/alta\s+gravidade|grave/i.test(clean)) gravidade = 'Alta';
+    else if (/baixa/i.test(clean)) gravidade = 'Baixa';
+
+    if (/comportament/i.test(clean)) tipoOcorrencia = 'Comportamental';
+    else if (/pedag[oó]gic|aprendizagem/i.test(clean)) tipoOcorrencia = 'Pedagogica';
+    else if (/sa[uú]de|m[eé]dic|sensorial/i.test(clean)) tipoOcorrencia = 'Saude';
+    else if (/disciplin|conflito|briga/i.test(clean)) tipoOcorrencia = 'Disciplinar';
+    else if (/frequ[eê]ncia|atraso|falta/i.test(clean)) tipoOcorrencia = 'Frequencia';
+
+    return {
+      alunoNome,
+      alunoMeta,
+      agenteNome,
+      agenteCargo,
+      data,
+      titulo,
+      detalhes,
+      status,
+      gravidade,
+      tipoOcorrencia,
+      rawText: clean
+    };
+  }
+
+  // --- CSV PARSER & IMPORT ---
+  function parseCSV(text) {
+    const firstLine = text.split('\n')[0] || '';
+    let delimiter = ',';
+    if ((firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length) {
+      delimiter = ';';
+    } else if ((firstLine.match(/\t/g) || []).length > (firstLine.match(/,/g) || []).length) {
+      delimiter = '\t';
+    }
+
+    const rows = [];
+    let currentRow = [];
+    let currentField = '';
+    let insideQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+
+      if (char === '"') {
+        if (insideQuotes && nextChar === '"') {
+          currentField += '"';
+          i++;
+        } else {
+          insideQuotes = !insideQuotes;
+        }
+      } else if (char === delimiter && !insideQuotes) {
+        currentRow.push(currentField.trim());
+        currentField = '';
+      } else if ((char === '\r' || char === '\n') && !insideQuotes) {
+        if (char === '\r' && nextChar === '\n') i++;
+        currentRow.push(currentField.trim());
+        if (currentRow.some(f => f.length > 0)) rows.push(currentRow);
+        currentRow = [];
+        currentField = '';
+      } else {
+        currentField += char;
+      }
+    }
+    if (currentField.length > 0 || currentRow.length > 0) {
+      currentRow.push(currentField.trim());
+      if (currentRow.some(f => f.length > 0)) rows.push(currentRow);
+    }
+    return rows;
+  }
+
+  async function importCSVFile(file) {
+    const text = await file.text();
+    const rows = parseCSV(text);
+    if (rows.length < 2) {
+      showToast('O arquivo CSV parece estar vazio ou sem linhas de dados.', 'danger');
+      return;
+    }
+
+    const headerRow = rows[0].map(h => h.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim());
+    const dataRows = rows.slice(1);
+
+    const isOco = headerRow.some(h => h.includes('gravidade') || h.includes('medida') || h.includes('tipo')) || currentImportTarget === 'ocorrencias';
+
+    function normalizeDateStr(val) {
+      if (!val) return new Date().toISOString().split('T')[0];
+      const brMatch = val.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/);
+      if (brMatch) {
+        return `${brMatch[3]}-${brMatch[2].padStart(2, '0')}-${brMatch[1].padStart(2, '0')}`;
+      }
+      return val;
+    }
+
+    if (isOco) {
+      const newItems = dataRows.map((cols, idx) => {
+        const getCol = (keywords, fallback = '') => {
+          const index = headerRow.findIndex(h => keywords.some(k => h.includes(k)));
+          return index !== -1 && cols[index] !== undefined && cols[index] !== '' ? cols[index] : fallback;
+        };
+
+        return {
+          id: 'oco_imp_' + Date.now() + '_' + idx,
+          alunoNome: getCol(['aluno', 'estudante', 'paciente', 'nome'], 'Aluno'),
+          alunoMeta: getCol(['info', 'turma', 'serie', 'ano', 'idade'], ''),
+          registradoPor: getCol(['registrado', 'profissional', 'autor', 'agente'], 'Profissional'),
+          profissaoRegistrante: getCol(['profissao', 'cargo', 'funcao'], 'Educador(a)'),
+          tipoOcorrencia: getCol(['tipo'], 'Comportamental'),
+          gravidade: getCol(['gravidade', 'urgencia'], 'Media'),
+          titulo: getCol(['titulo', 'assunto', 'motivo'], 'Ocorrência Importada via CSV'),
+          descricao: getCol(['descricao', 'relato', 'detalhe', 'ocorrencia'], 'Sem descrição detalhada.'),
+          medidasTomadas: getCol(['medida', 'encaminhamento', 'providencia'], ''),
+          data: normalizeDateStr(getCol(['data'])),
+          status: getCol(['status'], 'registrada').toLowerCase()
+        };
+      });
+
+      await addOcorrenciasBulk(newItems);
+      switchTab('ocorrencias');
+      showToast(`${newItems.length} ocorrência(s) importada(s) com sucesso a partir do CSV!`, 'success');
+      closeImportModal();
+    } else {
+      const newItems = dataRows.map((cols, idx) => {
+        const getCol = (keywords, fallback = '') => {
+          const index = headerRow.findIndex(h => keywords.some(k => h.includes(k)));
+          return index !== -1 && cols[index] !== undefined && cols[index] !== '' ? cols[index] : fallback;
+        };
+
+        return {
+          id: 'rec_imp_' + Date.now() + '_' + idx,
+          agenteNome: getCol(['profissional', 'registrador', 'agente', 'medico', 'autor'], 'Profissional Responsável'),
+          agenteCargo: getCol(['cargo', 'profissao', 'funcao', 'especialidade'], 'Psicopedagoga'),
+          alunoNome: getCol(['aluno', 'estudante', 'paciente', 'nome'], 'Aluno'),
+          alunoMeta: getCol(['info', 'turma', 'serie', 'ano', 'idade'], ''),
+          laudoTitulo: getCol(['titulo', 'laudo', 'diagnostico', 'assunto'], 'Laudo Importado via CSV'),
+          laudoDetalhes: getCol(['detalhe', 'observac', 'laudodetalhes', 'descricao', 'relatorio'], 'Sem detalhes cadastrados.'),
+          data: normalizeDateStr(getCol(['data'])),
+          status: getCol(['status'], 'concluido').toLowerCase()
+        };
+      });
+
+      await addRecordsBulk(newItems);
+      switchTab('laudos');
+      showToast(`${newItems.length} laudo(s) importado(s) com sucesso a partir do CSV!`, 'success');
+      closeImportModal();
+    }
+  }
+
+  // --- REVIEW FORM SUBMISSION (PDF / SINGLE IMPORT) ---
+  async function handleImportReviewSubmit(e) {
+    e.preventDefault();
+    const isLaudo = importTargetLaudo.checked;
+
+    if (isLaudo) {
+      const payload = {
+        id: 'rec_pdf_' + Date.now(),
+        agenteNome: importAgenteNome.value.trim(),
+        agenteCargo: importAgenteCargo.value.trim(),
+        alunoNome: importAlunoNome.value.trim(),
+        alunoMeta: importAlunoMeta.value.trim(),
+        laudoTitulo: importLaudoTitulo.value.trim() || 'Laudo Importado de PDF',
+        laudoDetalhes: importLaudoDetalhes.value.trim(),
+        data: importLaudoData.value || new Date().toISOString().split('T')[0],
+        status: importLaudoStatus.value
+      };
+
+      await addRecordToDb(payload);
+      switchTab('laudos');
+      showToast('Laudo importado e salvo com sucesso no banco de dados!', 'success');
+    } else {
+      const payload = {
+        id: 'oco_pdf_' + Date.now(),
+        alunoNome: importAlunoNome.value.trim(),
+        alunoMeta: importAlunoMeta.value.trim(),
+        registradoPor: importAgenteNome.value.trim(),
+        profissaoRegistrante: importAgenteCargo.value.trim(),
+        tipoOcorrencia: importOcoTipo.value,
+        gravidade: importOcoGravidade.value,
+        titulo: importOcoTitulo.value.trim() || 'Ocorrência Importada de PDF',
+        descricao: importOcoDescricao.value.trim(),
+        medidasTomadas: importOcoMedidas.value.trim(),
+        data: importOcoData.value || new Date().toISOString().split('T')[0],
+        status: importOcoStatus.value
+      };
+
+      await addOcorrenciaToDb(payload);
+      switchTab('ocorrencias');
+      showToast('Ocorrência importada e salva com sucesso!', 'success');
+    }
+
+    closeImportModal();
+  }
+
+  // --- BULK DATABASE HELPERS ---
+  async function addRecordsBulk(newRecs) {
+    if (isUsingApi) {
+      try {
+        for (const r of newRecs) {
+          await fetch(`${API_BASE}/records`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(r)
+          });
+        }
+        await initDataStore();
+        return true;
+      } catch (e) {
+        console.error('Erro na importação via API:', e);
+      }
+    }
+    records = [...newRecs, ...records];
+    saveToLocalStorage(STORAGE_KEY_LAUDOS, records);
+    refreshAllViews();
+    return true;
+  }
+
+  async function addOcorrenciasBulk(newOcos) {
+    if (isUsingApi) {
+      try {
+        for (const o of newOcos) {
+          await fetch(`${API_BASE}/ocorrencias`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(o)
+          });
+        }
+        await initDataStore();
+        return true;
+      } catch (e) {
+        console.error('Erro na importação de ocorrências via API:', e);
+      }
+    }
+    ocorrencias = [...newOcos, ...ocorrencias];
+    saveToLocalStorage(STORAGE_KEY_OCORRENCIAS, ocorrencias);
+    refreshAllViews();
+    return true;
   }
 
   // --- EXPORTS: LAUDOS ---

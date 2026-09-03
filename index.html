@@ -9,6 +9,9 @@
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
+  <!-- PDF.js for Client-Side PDF Parsing & Import -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
   <!-- Custom Styles -->
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -140,6 +143,9 @@
         </div>
 
         <div class="action-buttons">
+          <button id="btn-import-laudos" class="btn btn-secondary" title="Importar Laudos ou Avaliações (CSV ou PDF)">
+            <i class="fa-solid fa-file-import"></i> Importar
+          </button>
           <button id="btn-export-csv" class="btn btn-secondary" title="Exportar Laudos para CSV">
             <i class="fa-solid fa-file-csv"></i> CSV
           </button>
@@ -279,6 +285,9 @@
         </div>
 
         <div class="action-buttons">
+          <button id="btn-import-oco" class="btn btn-secondary" title="Importar Ocorrências (CSV ou PDF)">
+            <i class="fa-solid fa-file-import"></i> Importar
+          </button>
           <button id="btn-export-oco-csv" class="btn btn-secondary" title="Exportar Ocorrências para CSV">
             <i class="fa-solid fa-file-csv"></i> CSV
           </button>
@@ -585,6 +594,197 @@
         </button>
         <button type="button" class="btn btn-primary" id="view-oco-close-footer">Fechar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: IMPORTAR / REVISAR ARQUIVO (PDF / CSV)                             -->
+  <!-- ========================================================================= -->
+  <div class="modal-overlay" id="import-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="import-modal-title"><i class="fa-solid fa-file-arrow-up"></i> Importar Arquivo (CSV ou PDF)</h2>
+        <button class="modal-close" id="import-modal-close-btn" aria-label="Fechar Modal">&times;</button>
+      </div>
+
+      <!-- Step 1: Upload / Dropzone -->
+      <div id="import-upload-step">
+        <div class="modal-body">
+          <div class="import-dropzone" id="import-dropzone">
+            <i class="fa-solid fa-cloud-arrow-up import-dropzone-icon"></i>
+            <h3>Arraste e solte seu arquivo aqui</h3>
+            <p>Selecione um arquivo <strong>.CSV</strong> ou documento <strong>.PDF</strong></p>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px;">
+              <button type="button" class="btn btn-secondary" id="btn-select-csv">
+                <i class="fa-solid fa-file-csv" style="color: #34d399;"></i> Selecionar Planilha CSV
+              </button>
+              <button type="button" class="btn btn-primary" id="btn-select-pdf">
+                <i class="fa-solid fa-file-pdf"></i> Selecionar Laudo PDF
+              </button>
+            </div>
+            <input type="file" id="main-file-input" accept=".csv, .pdf, text/csv, application/pdf" style="display: none;">
+          </div>
+
+          <div class="import-instructions">
+            <h4><i class="fa-solid fa-circle-info"></i> Como funciona a importação inteligente:</h4>
+            <ul>
+              <li><strong>Planilhas CSV:</strong> Importa listas completas de laudos ou ocorrências em lote com detecção automática de colunas.</li>
+              <li><strong>Documentos PDF:</strong> Lê o texto do laudo/relatório via inteligência textual (OCR) e preenche automaticamente os campos para sua revisão antes de salvar.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: PDF Extracted Review Form -->
+      <form id="import-review-form" style="display: none;">
+        <div class="modal-body">
+          <div class="import-alert-info">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <div>
+              <strong>Dados extraídos automaticamente do PDF:</strong>
+              <p>Confira as informações detectadas e ajuste o que for necessário antes de confirmar.</p>
+            </div>
+          </div>
+
+          <!-- Target Type -->
+          <div class="form-group">
+            <label>Salvar como *</label>
+            <div class="import-target-selector">
+              <label class="radio-tab active" id="label-target-laudo">
+                <input type="radio" name="import-target" value="laudos" checked id="import-target-laudo">
+                <span><i class="fa-solid fa-file-medical"></i> Laudo & Avaliação</span>
+              </label>
+              <label class="radio-tab" id="label-target-oco">
+                <input type="radio" name="import-target" value="ocorrencias" id="import-target-oco">
+                <span><i class="fa-solid fa-triangle-exclamation"></i> Ocorrência do Aluno</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Student Row -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="import-aluno-nome">Nome do Aluno / Paciente *</label>
+              <input type="text" id="import-aluno-nome" class="form-control" list="alunos-datalist" placeholder="Nome do Aluno" required>
+            </div>
+            <div class="form-group">
+              <label for="import-aluno-meta">Turma / Série / Idade</label>
+              <input type="text" id="import-aluno-meta" class="form-control" placeholder="Ex: 4º Ano B (9 anos)">
+            </div>
+          </div>
+
+          <!-- Professional Row -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="import-agente-nome">Profissional / Quem Registrou *</label>
+              <input type="text" id="import-agente-nome" class="form-control" placeholder="Ex: Dra. Juliana Costa" required>
+            </div>
+            <div class="form-group">
+              <label for="import-agente-cargo">Profissão / Cargo *</label>
+              <input type="text" id="import-agente-cargo" class="form-control" list="profissoes-datalist" placeholder="Ex: Psicopedagoga" required>
+            </div>
+          </div>
+
+          <!-- Section: Specific to Laudos -->
+          <div id="import-laudo-fields">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="import-laudo-status">Status do Laudo *</label>
+                <select id="import-laudo-status" class="form-control">
+                  <option value="concluido">Concluído</option>
+                  <option value="em_andamento">Em Andamento</option>
+                  <option value="pendente">Pendente</option>
+                  <option value="revisao">Em Revisão</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="import-laudo-data">Data do Registro *</label>
+                <input type="date" id="import-laudo-data" class="form-control">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="import-laudo-titulo">Título / Diagnóstico / CID *</label>
+              <input type="text" id="import-laudo-titulo" class="form-control" placeholder="Ex: Avaliação Neuropsicológica - TDAH">
+            </div>
+
+            <div class="form-group">
+              <label for="import-laudo-detalhes">Detalhamento do Laudo / Observações</label>
+              <textarea id="import-laudo-detalhes" class="form-control" style="min-height: 110px;" placeholder="Conteúdo do laudo..."></textarea>
+            </div>
+          </div>
+
+          <!-- Section: Specific to Ocorrências -->
+          <div id="import-oco-fields" style="display: none;">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="import-oco-tipo">Tipo de Ocorrência *</label>
+                <select id="import-oco-tipo" class="form-control">
+                  <option value="Comportamental">Comportamental</option>
+                  <option value="Pedagogica">Pedagógica</option>
+                  <option value="Saude">Saúde / Sensorial</option>
+                  <option value="Disciplinar">Disciplinar</option>
+                  <option value="Frequencia">Frequência</option>
+                  <option value="Outro">Outro</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="import-oco-gravidade">Gravidade *</label>
+                <select id="import-oco-gravidade" class="form-control">
+                  <option value="Baixa">Baixa (Informativa)</option>
+                  <option value="Media" selected>Média</option>
+                  <option value="Alta">Alta</option>
+                  <option value="Urgente">Urgente</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="import-oco-data">Data da Ocorrência *</label>
+                <input type="date" id="import-oco-data" class="form-control">
+              </div>
+              <div class="form-group">
+                <label for="import-oco-status">Status *</label>
+                <select id="import-oco-status" class="form-control">
+                  <option value="registrada">Registrada</option>
+                  <option value="em_analise">Em Análise</option>
+                  <option value="em_acompanhamento">Em Acompanhamento</option>
+                  <option value="resolvida">Resolvida</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="import-oco-titulo">Título / Assunto da Ocorrência *</label>
+              <input type="text" id="import-oco-titulo" class="form-control" placeholder="Assunto da ocorrência">
+            </div>
+
+            <div class="form-group">
+              <label for="import-oco-descricao">Descrição do Ocorrido *</label>
+              <textarea id="import-oco-descricao" class="form-control" style="min-height: 90px;" placeholder="Relato do ocorrido..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="import-oco-medidas">Medidas Tomadas / Encaminhamentos</label>
+              <textarea id="import-oco-medidas" class="form-control" placeholder="Medidas tomadas..."></textarea>
+            </div>
+          </div>
+
+          <!-- Raw Extracted PDF Text Inspector -->
+          <details class="import-raw-details">
+            <summary><i class="fa-solid fa-file-lines"></i> Ver Texto Bruto Extraído do PDF</summary>
+            <pre id="import-raw-text" class="import-raw-pre"></pre>
+          </details>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-import-review">Voltar</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-import-review">
+            <i class="fa-solid fa-floppy-disk"></i> Confirmar & Salvar no Banco
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 
